@@ -7,7 +7,7 @@ For other purposes (e.g., commercial), please contact the authors.
 '''
 
 import time
-
+import math
 import click
 import torch.nn.functional as F
 import torch.optim as optim
@@ -16,6 +16,9 @@ from torch.utils.data import DataLoader
 from model import BPR
 from utils import *
 
+# Slice the given list into chunks of size n.
+def list_chunk(lst, n):
+    return [lst[i:i+n] for i in range(0, len(lst), n)]
 
 @click.command()
 @click.option('--data', type=str, default='ml-1m', help='Select Dataset')
@@ -24,17 +27,16 @@ from utils import *
 @click.option('--unmask', type=bool, default=False, help='Use unmask scheme if True')
 @click.option('--ut', type=int, default=0, help='Number of unmasking top items')
 @click.option('--ur', type=int, default=0, help='Number of unmasking random items')
-@click.option('--elambda', type=float, default=1, help='Weight of skewness regularizer')
 @click.option('--ep', type=int, default=200, help='Number of total epoch')
 @click.option('--reclen', type=int, default=30, help='Number of epoch with reccommendation loss')
 @click.option('--dim', type=int, default=32, help='Number of latent factors')
 @click.option('--cpu', type=bool, default=False, help='Use CPU while TDR')
 @click.option('--dut', type=float, default=0, help='Change on the number of unmasking top items per epoch')
 @click.option('--dur', type=float, default=0, help='Change on the number of unmasking random items per epoch')
-@click.option('--dlambda', type=float, default=1, help='Weight of coverage regularizer')
-def main(data, seed, reg, unmask, ut, ur, elambda, ep, reclen, dim, cpu, dut, dur, dlambda):
+@click.option('--rbs', type=int, default=0, help='Number of rows in mini batch')
+@click.option('--cbs', type=int, default=0, help='Number of columns in mini batch')
+def main(data, seed, reg, unmask, ut, ur, ep, reclen, dim, cpu, dut, dur, rbs, cbs):
     set_seed(seed)
-    print(data, seed, reg, unmask, ut, ur, elambda, ep, reclen, dim, dut, dur, dlambda)
     device = DEVICE
     # set hyperparameters
     config = {
@@ -87,7 +89,6 @@ def main(data, seed, reg, unmask, ut, ur, elambda, ep, reclen, dim, cpu, dut, du
 
     # obtain items in training set and ground truth items from data
     train_data = [[] for _ in range(user_num)]
-    untrain_data = [[] for _ in range(user_num)]
     gt = []
     with open(test_path, 'r') as fd:
         line = fd.readline()
@@ -133,60 +134,71 @@ def main(data, seed, reg, unmask, ut, ur, elambda, ep, reclen, dim, cpu, dut, du
 
         # train with diversity regularizer
         if reg and epoch > reclen:
-            # calculate number of unmasking items
-            rur = max(ur + int((epoch-reclen-1)*dur), 0)
-            rut = max(ut + int((epoch-reclen-1)*dut), 0)
-
-            # inference top-k recommendation lists
-            model.zero_grad()
-            scores = []
-            items = torch.arange(item_num).to(device)
-            for u in range(user_num):
-                u = torch.tensor([u]).to(device)
-                score, _ = model(u, items, items)
-                scores.append(score)
-            scores = torch.stack(scores)
-            scores = torch.softmax(scores, dim=1)
-            k = config['ks'][1]
-
-            # unmasking mechanism
-            if unmask:
-                k_ = item_num - (k+rut)
+            # top-k inference
+            k = config['ks'][1]            
+            
+            if rbs == 0:
+                row_batch_size = user_num
             else:
-                k_ = item_num - k
-            mask_idx = torch.topk(-scores, k=k_)[1]  # mask index for being filled 0
-            if unmask:
-                for u in range(user_num):
-                    idx = torch.randperm(mask_idx.shape[1])
-                    mask_idx[u] = mask_idx[u][idx]
-                if rur > 0:
-                    mask_idx = mask_idx[:, :-rur]
+                row_batch_size = rbs
+            row_batch = list_chunk(torch.randperm(user_num).tolist(), row_batch_size)
+            if cbs == 0:
+                col_batch_size = item_num
+            else:
+                col_batch_size = cbs
+            col_batch = list_chunk(torch.randperm(item_num).tolist(), col_batch_size)
+            
+            # calculate number of unmasking items for each mini batch
+            bk = math.ceil(k / len(col_batch))
+            bur = math.ceil(max(ur + int((epoch-reclen-1)*dur), 0) / len(col_batch))
+            but = math.ceil(max(ut + int((epoch-reclen-1)*dut), 0) / len(col_batch))
 
-            mask = torch.zeros(size=scores.shape, dtype=torch.bool)
-            mask[torch.arange(mask.size(0)).unsqueeze(1), mask_idx] = True
-            topk_scores = scores.masked_fill(mask.to(device), 0)
+            for rb in row_batch:
+                for cb in col_batch:
+                    # inference top-k recommendation lists
+                    model.zero_grad()
+                    scores = []
+                    items = torch.LongTensor(cb).to(device)
+                    for u in rb:
+                        u = torch.tensor([u]).to(device)
+                        score, _ = model(u, items, items)
+                        scores.append(score)
+                    scores = torch.stack(scores)
+                    scores = torch.softmax(scores, dim=1)
 
-            # coverage regularizer
-            scores_sum = torch.sum(topk_scores, dim=0, keepdim=False)
-            epsilon = 0.01
-            scores_sum += epsilon
-            d_loss = -torch.sum(torch.log(scores_sum))
+                    # unmasking mechanism
+                    if unmask:
+                        k_ = len(cb) - (bk+but)
+                    else:
+                        k_ = len(cb) - bk
+                    mask_idx = torch.topk(-scores, k=k_)[1]  # mask index for being filled 0
+                    if unmask:
+                        for u in range(len(rb)):
+                            idx = torch.randperm(mask_idx.shape[1])
+                            mask_idx[u] = mask_idx[u][idx]
+                        if bur > 0:
+                            mask_idx = mask_idx[:, :-bur]
 
-            # skewness regularizer
-            topk_scores = torch.topk(scores, k=k)[0]
-            norm_scores = topk_scores / torch.sum(topk_scores, dim=1, keepdim=True)
-            e_loss = torch.sum(torch.sum(norm_scores * torch.log(norm_scores), dim=1))
+                    mask = torch.zeros(size=scores.shape, dtype=torch.bool)
+                    mask[torch.arange(mask.size(0)).unsqueeze(1), mask_idx] = True
+                    topk_scores = scores.masked_fill(mask.to(device), 0)
 
-            # sum of losses
-            regularizations = dlambda*d_loss + elambda*e_loss
-            regularizations.backward()
-            optimizer.step()
+                    # coverage regularizer
+                    scores_sum = torch.sum(topk_scores, dim=0, keepdim=False)
+                    epsilon = 0.01
+                    scores_sum += epsilon
+                    d_loss = -torch.sum(torch.log(scores_sum))
+
+                    # skewness regularizer
+                    topk_scores = torch.topk(scores, k=k)[0]
+                    norm_scores = topk_scores / torch.sum(topk_scores, dim=1, keepdim=True)
+                    e_loss = torch.sum(torch.sum(norm_scores * torch.log(norm_scores), dim=1))
+
+                    # sum of losses
+                    regularizations = d_loss + e_loss
+                    regularizations.backward()
+                    optimizer.step()
         
-        # obtain items that are not in training dataset
-        if epoch == 1:
-            for u in range(user_num):
-                untrain_data[u] = list(set(range(item_num))-set(train_data[u]))
-
         # evaluate metrics
         model.eval()
         HRs, NDCGs, coverages, Gs, Es = [], [], [], [], []

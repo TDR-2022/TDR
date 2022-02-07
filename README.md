@@ -18,9 +18,9 @@ For other purposes (e.g., commercial), please contact the authors.
 - [tqdm](https://tqdm.github.io/)
 
 ## Usage
-You can run a demo script `demo.sh` that reproduces the experimental results in
-the paper by the following command.
+You can run a demo script `demo.sh` that reproduces the experimental results in the paper.
 You can change the hyperparameters by modifying arguments of `main.py`.
+Unpack zip files in `data` directory to use large datsets: Yelp-15, Gowalla-15, Movielens-10M.
 
 ## Datasets
 
@@ -28,8 +28,9 @@ Preprocessed data are included in the `data` directory.
 
 | Name | Users | Items | Interactions | Download |
 | --- | ---: | ---: | ---: | --- |
-| Movielens-100k | 943 | 1,682 | 100,000 | [Link](https://grouplens.org/datasets/movielens/100k/) |
+| Yelp-15 | 69,853 | 43,671 | 2,807,606 | [Link](https://www.yelp.com/dataset) |
+| Gowalla-15 | 34,688 | 63,729 | 2,438,708 | [Link](https://snap.stanford.edu/data/loc-gowalla.html) |
+| Epinions-15 | 5,531 | 4,286 | 186,995 | [Link](http://www.trustlet.org/downloaded_epinions.html) |
+| Movielens-10M | 69.878 | 10,677 | 1,000,209 | [Link](https://grouplens.org/datasets/movielens/1m/) |
 | Movielens-1M | 6,040 | 3,706 | 1,000,209 | [Link](https://grouplens.org/datasets/movielens/1m/) |
-| Epinions | 5,531 | 4,286 | 186,995 | [Link](http://www.trustlet.org/downloaded_epinions.html) |
-| Gowalla | 34,688 | 63,729 | 2,438,708 | [Link](https://snap.stanford.edu/data/loc-gowalla.html) |
-| Yelp | 41,774 | 30,037 | 2,032,705 | [Link](https://www.yelp.com/dataset) |
+| Movielens-100k | 943 | 1,682 | 100,000 | [Link](https://grouplens.org/datasets/movielens/100k/) |
