@@ -31,6 +31,6 @@ Preprocessed data are included in the `data` directory.
 | Yelp-15 | 69,853 | 43,671 | 2,807,606 | [Link](https://www.yelp.com/dataset) |
 | Gowalla-15 | 34,688 | 63,729 | 2,438,708 | [Link](https://snap.stanford.edu/data/loc-gowalla.html) |
 | Epinions-15 | 5,531 | 4,286 | 186,995 | [Link](http://www.trustlet.org/downloaded_epinions.html) |
-| Movielens-10M | 69.878 | 10,677 | 1,000,209 | [Link](https://grouplens.org/datasets/movielens/1m/) |
+| Movielens-10M | 69.878 | 10,677 | 10,000,054 | [Link](https://grouplens.org/datasets/movielens/1m/) |
 | Movielens-1M | 6,040 | 3,706 | 1,000,209 | [Link](https://grouplens.org/datasets/movielens/1m/) |
 | Movielens-100k | 943 | 1,682 | 100,000 | [Link](https://grouplens.org/datasets/movielens/100k/) |
