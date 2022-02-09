@@ -33,4 +33,3 @@ Preprocessed data are included in the `data` directory.
 | Epinions-15 | 5,531 | 4,286 | 186,995 | [Link](http://www.trustlet.org/downloaded_epinions.html) |
 | Movielens-10M | 69.878 | 10,677 | 10,000,054 | [Link](https://grouplens.org/datasets/movielens/1m/) |
 | Movielens-1M | 6,040 | 3,706 | 1,000,209 | [Link](https://grouplens.org/datasets/movielens/1m/) |
-| Movielens-100k | 943 | 1,682 | 100,000 | [Link](https://grouplens.org/datasets/movielens/100k/) |
