@@ -45,7 +45,7 @@ def main(data, seed, reg, unmask, ut, ur, ep, reclen, dim, cpu, dut, dur, rbs, c
         'latent_dim': dim,
         'batch_size': 4096,
         'epochs': ep,
-        'ks': [5, 10, 20],
+        'ks': [5, 10],
         'trn_neg': 4,
         'test_neg': 99
     }
