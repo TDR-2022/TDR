@@ -1,4 +1,4 @@
-# Top-K Diversity Regularizer
+# Top-K Diversity Regularization for Accurate and Aggregately Diversified Recommender Systems
 
 This project is a pytorch implementation of Top-𝑘 Diversity Regularization for Accurate and Aggregately Diversified Recommender Systems.
 This paper proposes a novel approach, Top-𝑘 Diversity Regularization (TDR), to achieve high aggregate level diversity in recommendation system while maintaining accuracy.
